@@ -1,0 +1,61 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: buildpacks-build-push
+spec:
+  description: Build image using Paketo buildpacks and push with buildah
+  params:
+    - name: IMAGE
+      type: string
+      description: Container image reference to build and push
+    - name: BUILDER
+      type: string
+      default: paketobuildpacks/builder-jammy-full:0.3.622@sha256:25efe93f3afa866e058f1bf6f72b5734dbd270a4b60e344a0df2d613bc19074c
+      description: Paketo builder image
+    - name: COMPONENT_PATH
+      type: string
+      default: ""
+      description: Component subdirectory inside the repository
+  workspaces:
+    - name: source
+      description: Component source directory
+    - name: dockerconfig
+      description: Docker credentials (config.json)
+  steps:
+    - name: build-and-push
+      image: buildpacksio/pack:0.40.6-base@sha256:a4a295a13126ca995544155113d54de9056dc77c721d770b8f8999fe3d775d92
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/bash
+        set -eu
+        
+        # Navigate to component if specified
+        COMPONENT_PATH="$(params.COMPONENT_PATH)"
+        if [ -n "$COMPONENT_PATH" ]; then
+          cd "$COMPONENT_PATH"
+        fi
+        
+        # Setup registry auth
+        if [ -d "$(workspaces.dockerconfig.path)" ]; then
+          mkdir -p /root/.docker
+          cp "$(workspaces.dockerconfig.path)/config.json" /root/.docker/config.json
+          echo "Registry auth configured"
+        fi
+        
+        IMAGE="$(params.IMAGE)"
+        BUILDER="$(params.BUILDER)"
+        
+        echo "Building image: $IMAGE with $BUILDER"
+        pack build "$IMAGE" \
+          --path . \
+          --builder "$BUILDER" \
+          --trust-builder
+        
+        echo "Pushing image: $IMAGE"
+        # Aquí usas buildah para pushear
+        buildah push \
+          --authfile /root/.docker/config.json \
+          "$IMAGE" \
+          docker://"$IMAGE"
+        
+        echo "SUCCESS: $IMAGE built and pushed"

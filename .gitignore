@@ -1,0 +1,12 @@
+# Secrets - never commit
+k8s/github-webhook-secret.yaml
+k8s/registry-secret.yaml
+*.local
+
+# Scripts
+scripts/*.sh
+
+# IDE
+.idea/
+.vscode/
+*.swp
