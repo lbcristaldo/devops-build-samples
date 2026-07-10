@@ -1,0 +1,40 @@
+# TODO: Not currently referenced in build-and-deploy pipeline.
+# Rationale: Core tasks prioritized; this notification step is cosmetic and
+# deferred to minimize troubleshooting complexity. Will be integrated later
+# with proper params passed from the pipeline.
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: notify-result
+spec:
+  description: Log final pipeline result status
+  params:
+    - name: status
+      type: string
+      description: Pipeline execution status
+    - name: component
+      type: string
+      description: Component name being built
+    - name: image
+      type: string
+      description: Image name built
+  steps:
+    - name: notify
+      image: alpine:3.24.1@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+      script: |
+        #!/bin/sh
+        status="$(params.status)"
+        component="$(params.component)"
+        image="$(params.image)"
+        if [ "$status" = "Succeeded" ]; then
+          echo "========================================"
+          echo "PIPELINE SUCCESS: $component"
+          echo "Image: $image deployed successfully"
+          echo "========================================"
+        else
+          echo "========================================"
+          echo "PIPELINE FAILED: $component"
+          echo "Component $component failed to build/deploy"
+          echo "Check task logs for details"
+          echo "========================================"
+        fi

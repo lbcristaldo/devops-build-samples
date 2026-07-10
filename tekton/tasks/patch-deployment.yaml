@@ -1,0 +1,44 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: patch-deployment
+spec:
+  description: Update deployment image using kubectl patch
+  params:
+    - name: deployment_name
+      type: string
+      description: Name of the deployment to patch
+    - name: image
+      type: string
+      description: New image to set
+    - name: namespace
+      type: string
+      default: default
+      description: Namespace of the deployment
+  steps:
+    - name: patch
+      image: dtzar/helm-kubectl:4.2
+      script: |
+        #!/bin/sh
+        set -euo pipefail
+
+        echo "Patching deployment $(params.deployment_name) with image $(params.image)"
+        deployment="$(params.deployment_name)"
+        namespace="$(params.namespace)"
+        image="$(params.image)"
+
+        if ! kubectl get deployment "$deployment" -n "$namespace" > /dev/null 2>&1; then
+          echo "ERROR: Deployment $deployment not found in namespace $namespace"
+          exit 1
+        fi
+
+        kubectl patch deployment "$deployment" \
+          -n "$namespace" \
+          --type='strategic' \
+          -p "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"app\",\"image\":\"$image\"}]}}}}" || {
+          echo "ERROR: Failed to patch deployment $deployment"
+          echo "Verify deployment exists and image format is valid"
+          exit 1
+        }
+
+        echo "SUCCESS: Updated deployment $deployment to $image"

@@ -1,0 +1,21 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: github-push-binding
+spec:
+  params:
+    - name: old_sha
+      value: $(body.before)
+    - name: new_sha
+      value: $(body.after)
+    - name: git_url
+      value: $(body.repository.clone_url)
+    - name: image_prefix
+      value: "docker.io/lbcristaldo"   
+    - name: max_concurrent
+      value: "5"      
+    - name: pipeline_namespace
+      value: "tekton-pipelines"
+    - name: builder_image
+      value: "paketobuildpacks/builder-jammy-full:0.3.622@sha256:25efe93f3afa866e058f1bf6f72b5734dbd270a4b60e344a0df2d613bc19074c"
+      
